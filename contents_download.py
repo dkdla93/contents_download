@@ -7,24 +7,21 @@ import zipfile
 import time
 import pandas as pd
 
-# [중요] 구글 서비스 계정 키 파일 경로 또는 같은 디렉토리에 있는 경우 파일명
-SERVICE_ACCOUNT_FILE = "isbn-search-443005-d650802511ad.json"
-
-# 구글 시트 URL (혹은 ID를 통해 열어도 됩니다)
+# 구글 시트(스프레드시트) URL (혹은 ID)
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1wtZedkiq_jVIRccEdh_3ssb_j6FFpU2K0coldo05EEc/edit?usp=sharing"
 
 def authenticate_gsheet():
     """
-    서비스 계정 키 파일을 사용해 구글 스프레드시트에 인증한 client를 반환
+    Streamlit의 secret에 저장된 서비스 계정 키(JSON 형식)를 불러와서 구글 스프레드시트에 인증한 gspread client를 반환
     """
+    # secrets.toml 혹은 Streamlit Cloud Secrets Manager에서 "gcp_service_account"라는 key로 저장됨
+    service_account_info = st.secrets["gcp_service_account"]
+    
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive"
     ]
-    credentials = Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, 
-        scopes=scopes
-    )
+    credentials = Credentials.from_service_account_info(service_account_info, scopes=scopes)
     gc = gspread.authorize(credentials)
     return gc
 
@@ -117,7 +114,6 @@ def main():
             st.success("모든 동영상 다운로드가 완료되었습니다.")
         except Exception as e:
             st.error(f"동영상 다운로드 중 오류가 발생했습니다: {e}")
-            # 다운로드 중 에러가 나면 종료
             return
 
         # Step 4. 다운로드된 파일들을 ZIP 파일로 묶기
@@ -134,20 +130,16 @@ def main():
             )
 
         # Step 6. 다운로드 완료된 링크들의 '진행상태'를 '진행완료'로 업데이트
-        #   - Google Sheet에서 컬럼 위치 찾기
         header_row = worksheet.row_values(1)  # 첫 번째 행(헤더)
         link_col_idx = header_row.index('링크') + 1
         status_col_idx = header_row.index('진행상태') + 1
 
-        #   - df에서 각각의 행 인덱스에 맞춰 업데이트
-        #     (df의 인덱스와 시트의 행 번호를 맞춰주기 위해 +2를 해줌)
         for df_index in df_mijinhaeng.index:
-            # 현재 시트에서 (df_index + 2) 행, status_col_idx 열을 '진행완료'로
             worksheet.update_cell(df_index + 2, status_col_idx, '진행완료')
 
         st.success("구글 시트의 '진행상태'가 '진행완료'로 업데이트되었습니다.")
-        
-        # 임시 디렉토리와 ZIP 파일 정리(선택사항)
+
+        # 임시 파일 정리 (선택사항)
         try:
             os.remove(zip_file_name)
             for f in os.listdir(download_dir):
