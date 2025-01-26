@@ -7,16 +7,14 @@ import zipfile
 import time
 import pandas as pd
 
-# 구글 시트(스프레드시트) URL (혹은 ID)
-SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1wtZedkiq_jVIRccEdh_3ssb_j6FFpU2K0coldo05EEc/edit?usp=sharing"
-
 def authenticate_gsheet():
     """
-    Streamlit의 secret에 저장된 서비스 계정 키(JSON 형식)를 불러와서 구글 스프레드시트에 인증한 gspread client를 반환
+    Streamlit의 secret에 저장된 서비스 계정 키(JSON 형식)를 불러와서 
+    구글 스프레드시트에 인증한 gspread client를 반환
     """
     # secrets.toml 혹은 Streamlit Cloud Secrets Manager에서 "gcp_service_account"라는 key로 저장됨
     service_account_info = st.secrets["gcp_service_account"]
-    
+
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive"
@@ -50,7 +48,6 @@ def create_zip_file(folder_path, zip_path):
         for root, dirs, files in os.walk(folder_path):
             for file in files:
                 file_path = os.path.join(root, file)
-                # 압축 시에는 파일명만 보존
                 zipf.write(file_path, arcname=file)
 
 def main():
@@ -67,7 +64,9 @@ def main():
         # Step 1. 구글 스프레드시트 인증
         try:
             gc = authenticate_gsheet()
-            spreadsheet = gc.open_by_url(SPREADSHEET_URL)
+            # Secret에 저장한 spreadsheet url 불러오기
+            spreadsheet_url = st.secrets["spreadsheet"]["url"]
+            spreadsheet = gc.open_by_url(spreadsheet_url)
         except Exception as e:
             st.error(f"구글 시트 연결 오류: {e}")
             return
@@ -107,8 +106,8 @@ def main():
 
         # 미진행 상태 링크 수집
         video_links = df_mijinhaeng['링크'].tolist()
-
         st.write(f"총 {len(video_links)}개의 링크를 다운로드합니다...")
+
         try:
             download_youtube_videos(video_links, download_dir)
             st.success("모든 동영상 다운로드가 완료되었습니다.")
