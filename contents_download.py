@@ -54,7 +54,7 @@ def main():
     st.title("YouTube MP4 다운로드 자동화")
 
     # 사용자로부터 탭(시트) 이름 입력
-    sheet_tab = st.text_input("다운로드할 탭(시트) 이름을 입력하세요:", value="예시탭")
+    sheet_tab = st.text_input("다운로드할 탭(시트) 이름을 입력하세요:", value="")
 
     if st.button("다운로드 실행"):
         if not sheet_tab:
